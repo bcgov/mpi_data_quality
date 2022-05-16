@@ -1,6 +1,3 @@
-[![Lifecycle:Experimental](https://img.shields.io/badge/Lifecycle-Experimental-339999)](<Redirect-URL>)
-
-
 mpi_data_quality
 ============================
 
@@ -8,22 +5,15 @@ mpi_data_quality
 
 Describe data being used (links), and how to run. Eg:
 
-There are four core scripts that are required for the analysis, they need to be run in order:
+There are three core scripts that are required for the analysis, they need to be run in order:
 
--   01\_clean.R
--   02\_analysis.R
--   03\_visualize.R
--   04\_output.R
-
-#### Example
-
-This is a basic example which shows you how to solve a common problem:
-
-``` r
-## basic example code
-```
+-   step_0_source_me_data.R
+-   step_1_source_me_clean.R
+-   step_2_explore_differences.R
 
 ### Project Status
+
+[![Lifecycle:Experimental](https://img.shields.io/badge/Lifecycle-Experimental-339999)](<Redirect-URL>)
 
 ### Getting Help or Reporting an Issue
 
