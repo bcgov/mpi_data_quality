@@ -3,8 +3,6 @@ mpi_data_quality
 
 ### Usage
 
-Describe data being used (links), and how to run. Eg:
-
 There are three core scripts that are required for the analysis, they need to be run in order:
 
 -   step_0_source_me_data.R
