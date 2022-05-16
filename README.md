@@ -1,8 +1,5 @@
-<!-- 
-[![Lifecycle:Experimental](https://img.shields.io/badge/Lifecycle-Experimental-339999)](<Redirect-URL>)
-See <https://github.com/BCDevExchange/Our-Project-Docs/blob/master/discussion/projectstates.md> 
-If you have bcgovr installed and you use RStudio, click the 'Insert BCDevex Badge' Addin.
--->
+[Lifecycle:Experimental](https://img.shields.io/badge/Lifecycle-Experimental-339999)](<Redirect-URL>)
+
 
 mpi_data_quality
 ============================
