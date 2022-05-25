@@ -5,9 +5,10 @@ mpi_data_quality
 
 There are three core scripts that are required for the analysis, they need to be run in order:
 
--   step_0_source_me_data.R
--   step_1_source_me_clean.R
--   step_2_explore_differences.R
+-   step_1_source_me_data.R
+-   step_2_source_me_clean.R
+-   step_3_source_me_plots.R
+-   step_4_run_document.Rmd
 
 ### Project Status
 
