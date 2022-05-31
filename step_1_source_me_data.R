@@ -66,6 +66,6 @@ mpi_raw_long <- readxl::read_excel(here::here("raw_data","MPIlongraw.xlsx"),
                                 "date"
                               ))%>%
   janitor::clean_names()%>%
-  mutate(published_dates=lubridate::floor_date(published_dates, unit="month"))
+  mutate(published_dates=lubridate::floor_date(published_dates, unit="month")) #some of the dates messed up.
 
 saveRDS(mpi_raw_long, here::here("processed_data", "mpi_raw_long.rds"))
