@@ -32,4 +32,24 @@ plots <- tibble(facet_by=c("construction_type", "construction_subtype", "project
 
 saveRDS(plots, here::here("processed_data","plots.rds"))
 
+#do the same for Man's long file-------------
+
+mpi_raw_long <- readRDS(here::here("processed_data", "mpi_raw_long.rds"))%>%
+  mutate(data_type="raw")
+mpi_clean_long <- readRDS(here::here("processed_data", "mpi_clean_long.rds"))%>%
+  mutate(data_type="clean")%>%
+  select(-weight)
+mpi_fabricated_long <- readRDS(here::here("processed_data", "mpi_fabricated_long.rds"))%>%
+  mutate(data_type="fabricated")%>%
+  select(-weight)
+
+all_data_long <- bind_rows(mpi_raw_long, mpi_clean_long, mpi_fabricated_long)
+
+plots_long <- tibble(facet_by=c("region", "project_status", "project_category_name"))%>%
+  mutate(plot=map(facet_by, plot_diff_long))
+
+saveRDS(plots_long, here::here("processed_data","plots_long.rds"))
+
+
+
 

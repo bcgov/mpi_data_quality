@@ -32,6 +32,18 @@ mode_fill <- function(tbbl) {
       project_category_name = Mode(project_category_name)
     )
 }
+
+mode_fill_long <- function(tbbl) {
+  # over-writes variables that SHOULD be constant with the project's modal (most common) value.
+  tbbl %>%
+    mutate(
+      project_name = Mode(project_name),
+      project_type = Mode(project_type),
+      region = Mode(region),
+      project_category_name = Mode(project_category_name)
+    )
+}
+
 updown_fill <- function(tbbl) {
   # creates a regular quarterly grid that extends from the first_entry_date to the maximum value of last_update, then
   # fills first in the up direction (backwards in time) and then down (forward in time)
@@ -52,6 +64,24 @@ updown_fill <- function(tbbl) {
     fill(project_status, .direction = "updown") %>%
     fill(first_entry_date, .direction = "updown")
 }
+
+updown_fill_long <- function(tbbl) {
+  # creates a regular quarterly grid that extends from the min to max of published_dates , then
+  # fills first in the up direction (backwards in time) and then down (forward in time)
+  assertthat::assert_that(all(month(tbbl$published_dates) %in% c(3,6,9,12)))
+  assertthat::assert_that(all(day(tbbl$published_dates) == 1))
+  all_quarters <- tibble(
+    published_dates = seq(min(tbbl$published_dates, na.rm = TRUE),
+                      max(tbbl$published_dates, na.rm = TRUE),
+                      by = "quarter"
+    )
+  )
+ tbbl <- left_join(all_quarters, tbbl, by = c("published_dates" = "published_dates")) %>%
+  #  distinct(published_dates, .keep_all = TRUE) %>%
+    fill(estimated_cost, .direction = "updown") %>%
+    fill(project_status, .direction = "updown")
+}
+
 possibly_abandoned <- function(tbbl) {
   # find projects where they were previously present in the MPI, are now missing AND were NOT reported completed.
   last_reported_stage <- tbbl %>%
@@ -87,6 +117,24 @@ plot_diff <- function(var){
   plt <- aest::aest_fix_labs(plt)
 #  plotly::ggplotly(plt)
 }
+
+plot_diff_long <- function(var){
+  grp_mn <- all_data_long%>%
+    group_by(get(var), published_dates, data_type)%>%
+    summarize(total_cost=sum(estimated_cost, na.rm=TRUE))
+# browser()
+ plt <- grp_mn%>%
+    ggplot(aes(published_dates, total_cost, colour=data_type))+
+    geom_line()+
+    facet_wrap(~`get(var)`, scales="free_y")+
+    scale_y_continuous(labels = scales::comma)+
+    scale_colour_brewer(palette = "Dark2")
+  plt <- aest::aest_fix_labs(plt)
+  #  plotly::ggplotly(plt)
+}
+
+
+
 
 
 

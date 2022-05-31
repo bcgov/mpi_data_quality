@@ -1,6 +1,6 @@
 ---
-title: "Major Project Inventory: data quality"
-date: "`r paste0('updated: ',as.Date(file.info(here::here('processed_data','mpi_clean.rds'))$mtime-lubridate::hours(0)))`"
+title: 'Major Project Inventory: data quality'
+date: "`r paste0('updated: ',as.Date(file.info(here::here('processed_data','plots.rds'))$mtime-lubridate::hours(7)))`"
 output:
   flexdashboard::flex_dashboard:
     orientation: rows
@@ -8,6 +8,9 @@ output:
     source_code: https://github.com/bcgov/mpi_data_quality
     css: style.css
 runtime: shiny
+resource_files:
+- processed_data/plots.rds
+- processed_data/plots_long.rds
 ---
 
 ```{r global, include=FALSE}
@@ -27,9 +30,12 @@ if (!"tidyverse" %in% names(sessionInfo()$otherPkgs)) library(tidyverse)
 if (!"lubridate" %in% names(sessionInfo()$otherPkgs)) library(lubridate) # years and months not exported objects
 plots <- readRDS(here::here("processed_data", "plots.rds"))%>%
   mutate(facet_by=str_to_title(str_replace_all(facet_by, "_"," ")))
+plots_long <- readRDS(here::here("processed_data", "plots_long.rds"))%>%
+  mutate(facet_by=str_to_title(str_replace_all(facet_by, "_"," ")))
+
 ```
 
-Comparison between raw, clean and fabricated data: 
+Web data: 
 =====================================     
 
 Inputs {.sidebar data-width=400}
@@ -74,5 +80,59 @@ renderPlot({
     select(plot)%>%
     pull()
   plt[[1]]
-})
+})%>%
+  bindCache(input$facet_var)
 ```
+
+Excel data: 
+=====================================     
+
+Inputs {.sidebar data-width=400}
+-------------------------------------
+
+```{r}
+selectInput(
+  "facet_var_long",
+  "What variable do you want to facet by?",
+  plots_long$facet_by,
+  selected = plots_long$facet_by[1],
+  multiple = FALSE
+)
+
+```
+
+* Raw data is sourced from file "MPIlongraw.xlsx" with no processing.
+
+* Clean data corrects for two main problems in the data:
+  + Mis-categorization: some projects change categories mid-project. 
+  + Missing values, both explicit (the presence of an absence i.e. value recorded as NA) and implicit (the absence of a presence i.e. project missing from MPI).
+
+* In order to clean the data:
+  + For each project the reported categories are replaced with that project's modal (most common) reported category.
+  + Implicit missing values are converted to explicit missing values by left joining 1) a regular grid of quarterly dates with 2) the observed data.
+  + Finally the explicit missing variables (estimated_cost, project_status) are "updown" filled:  First missing values are filled up (backwards in time) and then down (forwards in time).
+
+*  Fabricated data replaces remaining NA values (projects that have never reported an estimated cost) with a guess of the estimated cost.
+*  The guess is the mean of: 
+    + The average estimated cost for all projects of the same project_type and region.
+    + 15M, which is the minimum project size to be considered "Major".
+
+Column
+-----------------------------------------------------------------------
+
+###
+
+```{r}
+renderPlot({
+  plt <- plots_long%>%
+    filter(facet_by==input$facet_var_long)%>%
+    select(plot)%>%
+    pull()
+  plt[[1]]
+})%>%
+  bindCache(input$facet_var_long)
+```
+
+
+
+

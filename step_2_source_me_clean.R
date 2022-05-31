@@ -80,3 +80,36 @@ whats_the_deal <- mpi_clean%>%
   ungroup() %>%
   select(project_name, last_project_status, last_update, last_phone)
 saveRDS(whats_the_deal, here::here("processed_data","whats_the_deal.rds"))
+
+# do the same for Man's long file------------
+
+mpi_raw_long <- readRDS(here::here("processed_data", "mpi_raw_long.rds"))
+#long_start_date <- min(mpi_raw_long$last_update, na.rm = TRUE) #the date of the first MPI file used.
+#long_last_date <- max(mpi_raw_long$last_update, na.rm = TRUE) #the date of the last MPI file used.
+
+nested_long <- mpi_raw_long %>%
+  group_by(project_id) %>%
+  nest() %>%
+  mutate(data = map(data, mode_fill_long))%>% # replace all the categorical variables that SHOULD be constant with their modal value-----
+unnest(data) %>%
+  group_by( # grouping by all these (redundant) constants before nesting leaves only true variables in nested data.
+    project_id,
+    project_name,
+    project_type,
+    region,
+    project_category_name
+  ) %>%
+  nest() %>% # converts implicit missing to explicit and fills up (backwards in time) then down (forward in time).------
+mutate(data = map(data, updown_fill_long))
+
+mpi_clean_long <- nested_long %>%
+  mutate(data=map(data, add_weight))%>%
+  #without weights group averages would be biased towards long lived projects i.e. with weights each project gets equal weight regardless of how long lived.
+  unnest(data)
+
+mpi_fabricated_long<- mpi_clean_long%>%
+  group_by(project_type, region)%>%
+  mutate(estimated_cost = ifelse(is.na(estimated_cost), (weighted.mean(estimated_cost, w = weight, na.rm = TRUE)+15)/2, estimated_cost))
+
+saveRDS(mpi_clean_long, here::here("processed_data","mpi_clean_long.rds"))
+saveRDS(mpi_fabricated_long, here::here("processed_data","mpi_fabricated_long.rds"))

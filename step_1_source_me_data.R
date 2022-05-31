@@ -47,3 +47,25 @@ mpi_raw <- data.table::rbindlist(mpi_nested$data, use.names = FALSE)%>%
                                               `Residential & Commercial`= c("Residential/Commercial",
                                                                             "Residential Commercial")))
 saveRDS(mpi_raw, here::here("processed_data", "mpi_raw.rds"))
+
+#do the same for Man's long file-----------
+
+mpi_raw_long <- readxl::read_excel(here::here("raw_data","MPIlongraw.xlsx"),
+                              col_types=c(
+                                "numeric",
+                                "text",
+                                "numeric",
+                                "text",
+                                "text",
+                                "text",
+                                "text",
+                                "text",
+                                "date",
+                                "text",
+                                "text",
+                                "date"
+                              ))%>%
+  janitor::clean_names()%>%
+  mutate(published_dates=lubridate::floor_date(published_dates, unit="month"))
+
+saveRDS(mpi_raw_long, here::here("processed_data", "mpi_raw_long.rds"))
