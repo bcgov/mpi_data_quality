@@ -15,41 +15,37 @@
 # libraries--------
 if (!"tidyverse" %in% names(sessionInfo()$otherPkgs)) library(tidyverse)
 if (!"lubridate" %in% names(sessionInfo()$otherPkgs)) library(lubridate) # years and months not exported objects
-source(here::here("R","functions.R"))
-mpi_raw <- readRDS(here::here("processed_data", "mpi_raw.rds"))%>%
-  mutate(data_type="raw")
-mpi_clean <- readRDS(here::here("processed_data", "mpi_clean.rds"))%>%
-  mutate(data_type="clean")%>%
+source(here::here("R", "functions.R"))
+mpi_raw <- readRDS(here::here("processed_data", "mpi_raw.rds")) %>%
+  mutate(data_type = "raw")
+mpi_clean <- readRDS(here::here("processed_data", "mpi_clean.rds")) %>%
+  mutate(data_type = "clean") %>%
   select(-weight)
-mpi_fabricated <- readRDS(here::here("processed_data", "mpi_fabricated.rds"))%>%
-  mutate(data_type="fabricated")%>%
+mpi_fabricated <- readRDS(here::here("processed_data", "mpi_fabricated.rds")) %>%
+  mutate(data_type = "fabricated") %>%
   select(-weight)
 
 all_data <- bind_rows(mpi_raw, mpi_clean, mpi_fabricated)
 
-plots <- tibble(facet_by=c("construction_type", "construction_subtype", "project_type", "region", "project_status", "project_stage", "project_category_name"))%>%
-  mutate(plot=map(facet_by, plot_diff))
+plots <- tibble(facet_by = c("construction_type", "construction_subtype", "project_type", "region", "project_status", "project_stage", "project_category_name")) %>%
+  mutate(plot = map(facet_by, plot_diff))
 
-saveRDS(plots, here::here("processed_data","plots.rds"))
+saveRDS(plots, here::here("processed_data", "plots.rds"))
 
-#do the same for Man's long file-------------
+# do the same for Man's long file-------------
 
-mpi_raw_long <- readRDS(here::here("processed_data", "mpi_raw_long.rds"))%>%
-  mutate(data_type="raw")
-mpi_clean_long <- readRDS(here::here("processed_data", "mpi_clean_long.rds"))%>%
-  mutate(data_type="clean")%>%
+mpi_raw_long <- readRDS(here::here("processed_data", "mpi_raw_long.rds")) %>%
+  mutate(data_type = "raw")
+mpi_clean_long <- readRDS(here::here("processed_data", "mpi_clean_long.rds")) %>%
+  mutate(data_type = "clean") %>%
   select(-weight)
-mpi_fabricated_long <- readRDS(here::here("processed_data", "mpi_fabricated_long.rds"))%>%
-  mutate(data_type="fabricated")%>%
+mpi_fabricated_long <- readRDS(here::here("processed_data", "mpi_fabricated_long.rds")) %>%
+  mutate(data_type = "fabricated") %>%
   select(-weight)
 
 all_data_long <- bind_rows(mpi_raw_long, mpi_clean_long, mpi_fabricated_long)
 
-plots_long <- tibble(facet_by=c("region", "project_status", "project_category_name"))%>%
-  mutate(plot=map(facet_by, plot_diff_long))
+plots_long <- tibble(facet_by = c("region", "project_status", "project_category_name")) %>%
+  mutate(plot = map(facet_by, plot_diff_long))
 
-saveRDS(plots_long, here::here("processed_data","plots_long.rds"))
-
-
-
-
+saveRDS(plots_long, here::here("processed_data", "plots_long.rds"))

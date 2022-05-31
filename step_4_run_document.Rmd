@@ -28,11 +28,10 @@ resource_files:
 # libraries----------
 if (!"tidyverse" %in% names(sessionInfo()$otherPkgs)) library(tidyverse)
 if (!"lubridate" %in% names(sessionInfo()$otherPkgs)) library(lubridate) # years and months not exported objects
-plots <- readRDS(here::here("processed_data", "plots.rds"))%>%
-  mutate(facet_by=str_to_title(str_replace_all(facet_by, "_"," ")))
-plots_long <- readRDS(here::here("processed_data", "plots_long.rds"))%>%
-  mutate(facet_by=str_to_title(str_replace_all(facet_by, "_"," ")))
-
+plots <- readRDS(here::here("processed_data", "plots.rds")) %>%
+  mutate(facet_by = str_to_title(str_replace_all(facet_by, "_", " ")))
+plots_long <- readRDS(here::here("processed_data", "plots_long.rds")) %>%
+  mutate(facet_by = str_to_title(str_replace_all(facet_by, "_", " ")))
 ```
 
 Web data: 
@@ -49,7 +48,6 @@ selectInput(
   selected = plots$facet_by[1],
   multiple = FALSE
 )
-
 ```
 
 * Raw data is sourced from [Economic Development](https://www2.gov.bc.ca/gov/content/employment-business/economic-development/industry/bc-major-projects-inventory/recent-reports) with no processing.
@@ -75,12 +73,12 @@ Column
 
 ```{r}
 renderPlot({
-  plt <- plots%>%
-    filter(facet_by==input$facet_var)%>%
-    select(plot)%>%
+  plt <- plots %>%
+    filter(facet_by == input$facet_var) %>%
+    select(plot) %>%
     pull()
   plt[[1]]
-})%>%
+}) %>%
   bindCache(input$facet_var)
 ```
 
@@ -98,7 +96,6 @@ selectInput(
   selected = plots_long$facet_by[1],
   multiple = FALSE
 )
-
 ```
 
 * Raw data is sourced from file "MPIlongraw.xlsx" with no processing.
@@ -124,15 +121,11 @@ Column
 
 ```{r}
 renderPlot({
-  plt <- plots_long%>%
-    filter(facet_by==input$facet_var_long)%>%
-    select(plot)%>%
+  plt <- plots_long %>%
+    filter(facet_by == input$facet_var_long) %>%
+    select(plot) %>%
     pull()
   plt[[1]]
-})%>%
+}) %>%
   bindCache(input$facet_var_long)
 ```
-
-
-
-
