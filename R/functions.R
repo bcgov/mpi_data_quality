@@ -134,3 +134,55 @@ plot_diff_long <- function(var) {
   plt <- aest::aest_fix_labs(plt)
   #  plotly::ggplotly(plt)
 }
+
+add_flags <- function(modified_df, raw_df) {
+  left_join(modified_df,
+    raw_df,
+    by = c(
+      "project_id" = "project_id",
+      "published_dates" = "published_dates"
+    ),
+    suffix = c("_modified", "_raw")
+  ) %>%
+    mutate(
+      project_name_change = if_else(project_name_modified == project_name_raw,
+        FALSE,
+        TRUE,
+        TRUE
+      ),
+      project_type_change = if_else(project_type_modified == project_type_raw,
+        FALSE,
+        TRUE,
+        TRUE
+      ),
+      region_change = if_else(region_modified == region_raw,
+        FALSE,
+        TRUE,
+        TRUE
+      ),
+      project_category_name_change = if_else(project_category_name_modified == project_category_name_raw,
+        FALSE,
+        TRUE,
+        TRUE
+      ),
+      estimated_cost_change = if_else(near(
+        estimated_cost_modified,
+        estimated_cost_raw
+      ),
+      FALSE,
+      TRUE,
+      TRUE
+      ),
+      project_status_change = if_else(project_status_modified == project_status_raw,
+        FALSE,
+        TRUE,
+        TRUE
+      ),
+      any_change = project_name_change == TRUE |
+        project_type_change == TRUE |
+        region_change == TRUE |
+        project_category_name_change == TRUE |
+        estimated_cost_change == TRUE |
+        project_status_change == TRUE
+    )
+}

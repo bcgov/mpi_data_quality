@@ -123,5 +123,16 @@ mpi_fabricated_long <- mpi_clean_long %>%
   group_by(project_type, region) %>%
   mutate(estimated_cost = ifelse(is.na(estimated_cost), (weighted.mean(estimated_cost, w = weight, na.rm = TRUE) + 15) / 2, estimated_cost))
 
+# comparison between dataframes---------------
+
+clean_vs_raw <- add_flags(mpi_clean_long, mpi_raw_long)
+fabricated_vs_raw <- add_flags(mpi_fabricated_long, mpi_raw_long)
+
+# save the data------------
 saveRDS(mpi_clean_long, here::here("processed_data", "mpi_clean_long.rds"))
 saveRDS(mpi_fabricated_long, here::here("processed_data", "mpi_fabricated_long.rds"))
+saveRDS(clean_vs_raw, here::here("processed_data", "mpi_clean_vs_raw.rds"))
+saveRDS(fabricated_vs_raw, here::here("processed_data", "mpi_fabricated_vs_raw.rds"))
+
+
+

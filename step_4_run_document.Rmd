@@ -11,6 +11,11 @@ runtime: shiny
 resource_files:
 - processed_data/plots.rds
 - processed_data/plots_long.rds
+- processed_data/mpi_fabricated_vs_raw.rds
+- processed_data/mpi_clean_vs_raw.rds
+- processed_data/mpi_fabricated_long.rds
+- processed_data/mpi_clean_long.rds
+- processed_data/mpi_raw_long.rds
 ---
 
 ```{r global, include=FALSE}
@@ -32,6 +37,22 @@ plots <- readRDS(here::here("processed_data", "plots.rds")) %>%
   mutate(facet_by = str_to_title(str_replace_all(facet_by, "_", " ")))
 plots_long <- readRDS(here::here("processed_data", "plots_long.rds")) %>%
   mutate(facet_by = str_to_title(str_replace_all(facet_by, "_", " ")))
+mpi_raw_long <- readRDS(here::here("processed_data", "mpi_raw_long.rds")) %>%
+  mutate(data_type = "raw")
+mpi_clean_long <- readRDS(here::here("processed_data", "mpi_clean_long.rds")) %>%
+  mutate(data_type = "clean") %>%
+  select(-weight)
+mpi_fabricated_long <- readRDS(here::here("processed_data", "mpi_fabricated_long.rds")) %>%
+  mutate(data_type = "fabricated") %>%
+  select(-weight)
+clean_vs_raw <- readRDS(here::here("processed_data", "mpi_clean_vs_raw.rds"))
+fabricated_vs_raw  <- readRDS(here::here("processed_data", "mpi_fabricated_vs_raw.rds"))
+#functions---------
+downloadButtonRmd <- function (outputId, label = "Download", class = NULL, ...)  {
+     tags$a(id = outputId, class = paste("btn btn-default shiny-download-link", 
+        class), href = "", target = "_blank", download = NA, 
+        icon("download"), label, ...)
+ }
 ```
 
 Web data: 
@@ -98,7 +119,7 @@ selectInput(
 )
 ```
 
-* Raw data is sourced from file "MPIlongraw.xlsx" with no processing.
+* Raw data is sourced from file "MPIlongraw.xlsx".
 
 * Clean data corrects for two main problems in the data:
   + Mis-categorization: some projects change categories mid-project. 
@@ -106,18 +127,72 @@ selectInput(
 
 * In order to clean the data:
   + For each project the reported categories are replaced with that project's modal (most common) reported category.
-  + Implicit missing values are converted to explicit missing values by left joining 1) a regular grid of quarterly dates with 2) the observed data.
-  + Finally the explicit missing variables (estimated_cost, project_status) are "updown" filled:  First missing values are filled up (backwards in time) and then down (forwards in time).
+  + Implicit missing values are converted to explicit missing values by joining to a regular grid of quarterly dates.
+  + Finally the explicit missing variables (estimated_cost, project_status) are "updown" filled:  First missing values are filled backwards in time and then forwards in time.
 
-*  Fabricated data replaces remaining NA values (projects that have never reported an estimated cost) with a guess of the estimated cost.
-*  The guess is the mean of: 
+*  Fabricated data replaces remaining NA values (projects that have never reported an estimated cost) with the mean of: 
     + The average estimated cost for all projects of the same project_type and region.
     + 15M, which is the minimum project size to be considered "Major".
 
-Column
+### Download Data:
+    
+```{r}
+output$clean <- downloadHandler(filename = function() { 
+   "clean_MPI.csv"
+ },
+ content = function(file) {
+   write_csv(mpi_clean_long, file)
+ })
+output$fabricated <- downloadHandler(filename = function() { 
+   "fabricated_MPI.csv"
+ },
+ content = function(file) {
+   write_csv(mpi_fabricated_long, file)
+ })
+
+output$clean_vs_raw <- downloadHandler(filename = function() { 
+   "clean_vs_raw_MPI.csv"
+ },
+ content = function(file) {
+   write_csv(clean_vs_raw, file)
+ })
+output$fabricated_vs_raw <- downloadHandler(filename = function() { 
+   "fabricated_vs_raw_MPI.csv"
+ },
+ content = function(file) {
+   write_csv(fabricated_vs_raw, file)
+ })
+```
+
+```{r}
+downloadButtonRmd("clean", label = "Download clean data")
+```
+
+<br>
+
+```{r}
+downloadButtonRmd("fabricated", label = "Download fabricated data")
+```
+  
+<br>    
+
+```{r}
+downloadButtonRmd("clean_vs_raw", label = "Download clean vs. raw data")
+```
+  
+<br>    
+
+```{r}
+downloadButtonRmd("fabricated_vs_raw", label = "Download fabricated vs. raw data")
+```
+  
+<br>    
+
+
+Column 
 -----------------------------------------------------------------------
 
-###
+### Plots:
 
 ```{r}
 renderPlot({
@@ -129,3 +204,9 @@ renderPlot({
 }) %>%
   bindCache(input$facet_var_long)
 ```
+
+
+
+
+
+
