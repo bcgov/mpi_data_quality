@@ -55,7 +55,7 @@ downloadButtonRmd <- function (outputId, label = "Download", class = NULL, ...) 
  }
 ```
 
-Web data: 
+Web data, plus most recent quarter, Man-ual:) 
 =====================================     
 
 Inputs {.sidebar data-width=400}
@@ -93,7 +93,7 @@ Column
 ###
 
 ```{r}
-renderPlot({
+plotly::renderPlotly({
   plt <- plots %>%
     filter(facet_by == input$facet_var) %>%
     select(plot) %>%
@@ -103,7 +103,7 @@ renderPlot({
   bindCache(input$facet_var)
 ```
 
-Excel data: 
+Long data: 
 =====================================     
 
 Inputs {.sidebar data-width=400}
@@ -195,7 +195,7 @@ Column
 ### Plots:
 
 ```{r}
-renderPlot({
+plotly::renderPlotly({
   plt <- plots_long %>%
     filter(facet_by == input$facet_var_long) %>%
     select(plot) %>%
