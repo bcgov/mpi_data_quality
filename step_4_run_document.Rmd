@@ -55,7 +55,7 @@ downloadButtonRmd <- function (outputId, label = "Download", class = NULL, ...) 
  }
 ```
 
-Web data, plus most recent quarter, Man-ual:) 
+Web data
 =====================================     
 
 Inputs {.sidebar data-width=400}

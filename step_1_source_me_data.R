@@ -41,13 +41,13 @@ mpi_nested <- tibble(file = here::here("raw_data", mpi_files), sheet = mpi_sheet
     data = map(data, keep_columns)
   )
 # Man-ually supplied file---------
-latest_data <- tibble(file=here::here("raw_data","mpi_dataset_q1_2022.xlsx"), sheet="mpi_dataset_q1_2022")%>%
-  mutate(
-    data = map2(file, sheet, readxl::read_excel),
-    data = map(data, janitor::clean_names),
-    data = map(data, keep_columns)
-  )
-mpi_nested <- bind_rows(mpi_nested, latest_data)
+# latest_data <- tibble(file=here::here("raw_data","mpi_dataset_q1_2022.xlsx"), sheet="mpi_dataset_q1_2022")%>%
+#   mutate(
+#     data = map2(file, sheet, readxl::read_excel),
+#     data = map(data, janitor::clean_names),
+#     data = map(data, keep_columns)
+#   )
+# mpi_nested <- bind_rows(mpi_nested, latest_data)
 
 mpi_raw <- data.table::rbindlist(mpi_nested$data, use.names = FALSE) %>%
   as_tibble() %>%
