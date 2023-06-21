@@ -10,10 +10,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and limitations under the License.
 
-# This script downloads the MPI data from https://www2.gov.bc.ca/gov/content/employment-business/economic-development/industry/bc-major-projects-inventory/recent-reports
-# and does some pre-processing.
+# This script downloads previous MPI data from https://www2.gov.bc.ca/gov/content/employment-business/economic-development/industry/bc-major-projects-inventory/recent-reports
 
-#' Before running:  Replace the file latest.xlsx in the directory raw_data with... the latest MPI excel file.
+#' Before running:
+if (!file.exists(here::here("raw_data"))) dir.create(here::here("raw_data"))
+if (!file.exists(here::here("processed_data"))) dir.create(here::here("processed_data"))
+#' (re)place the file latest.xlsx in the directory raw_data.
 
 # libraries--------
 library(tidyverse)
@@ -21,8 +23,6 @@ library(lubridate)
 #functions-------------------
 source(here::here("R","functions.R"))
 #the script---------------------
-if (!file.exists(here::here("raw_data"))) dir.create(here::here("raw_data"))
-if (!file.exists(here::here("processed_data"))) dir.create(here::here("processed_data"))
 mpi_url_to_scrape <- "https://www2.gov.bc.ca/gov/content/employment-business/economic-development/industry/bc-major-projects-inventory/recent-reports"
 mpi_scraped <- rvest::read_html(mpi_url_to_scrape)
 mpi_links <- rvest::html_attr(rvest::html_nodes(mpi_scraped, "a"), "href") # all the links
@@ -30,7 +30,9 @@ mpi_links <- mpi_links[mpi_links %>% startsWith("/assets/") & mpi_links %>% ends
   na.omit()
 mpi_links <- paste0("https://www2.gov.bc.ca", mpi_links) # paste the head onto the stubs
 mpi_files <- paste0("mpi_dl", 1:length(mpi_links), ".xlsx") # sane file naming.
-#mapply(download.file, mpi_links, here::here("raw_data", mpi_files)) # downloads all the old mpi files into folder raw_data
+# NOTE THAT YOU ONLY NEED TO DOWNLOAD THE DATA ONCE PER QUARTER... FOLLOWING LINE CAN BE COMMENTED OUT TO SKIP DOWNLOAD
+mapply(download.file, mpi_links, here::here("raw_data", mpi_files)) # downloads all the old mpi files into folder raw_data
+########
 mpi_all_sheets <- sapply(here::here("raw_data", mpi_files), readxl::excel_sheets) # gets all the sheets
 sheet_starts_with_mpi <- lapply(mpi_all_sheets, function(x) x[startsWith(x, "mpi")]) %>%
   unlist(use.names = FALSE) # could break... assumes excel sheet naming remains consistent.

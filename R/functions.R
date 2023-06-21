@@ -105,7 +105,7 @@ plot_diff <- function(var) {
     summarize(total_cost = sum(estimated_cost, na.rm = TRUE)) %>%
     ggplot(aes(last_update, total_cost, colour = data_type)) +
     geom_line() +
-    geom_jitter(alpha=.25)+
+    geom_point(alpha=.5)+
     facet_wrap(~`get(var)`, scales = "free_y") +
     scale_y_continuous(labels = scales::comma) +
     scale_colour_brewer(palette = "Dark2")
