@@ -1,16 +1,7 @@
 mpi_data_quality
 ============================
 
-### Before running the script:
-
-create the required directory structure if missing:
-
-```
-if (!file.exists(here::here("raw_data"))) dir.create(here::here("raw_data"))
-if (!file.exists(here::here("processed_data"))) dir.create(here::here("processed_data"))
-```
-
-and then (re)place the file latest.xlsx (rename the current MPI raw data file) in the directory raw_data
+### Usage:
 
 You can either just clean the data:
 
@@ -20,6 +11,8 @@ or (optionally) visualize the difference between the raw and clean data by vario
 
 -  source the file **1_optional_source_me_plots.R**
 -  run document the file **2_optional_run_document.Rmd**
+
+Each quarter the file latest.xlsx needs to be replaced with... the latest MPI excel file. 
 
 ### Project Status
 
