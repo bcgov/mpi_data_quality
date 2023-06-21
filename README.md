@@ -10,7 +10,7 @@ if (!file.exists(here::here("raw_data"))) dir.create(here::here("raw_data"))
 if (!file.exists(here::here("processed_data"))) dir.create(here::here("processed_data"))
 ```
 
-and then (re)place the file latest.xlsx (renamed the current MPI raw data file) in the directory raw_data
+and then (re)place the file latest.xlsx (rename the current MPI raw data file) in the directory raw_data
 
 You can either just clean the data:
 
