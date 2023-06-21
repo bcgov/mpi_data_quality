@@ -13,8 +13,6 @@
 # This script downloads previous MPI data from https://www2.gov.bc.ca/gov/content/employment-business/economic-development/industry/bc-major-projects-inventory/recent-reports
 
 #' Before running:
-if (!file.exists(here::here("raw_data"))) dir.create(here::here("raw_data"))
-if (!file.exists(here::here("processed_data"))) dir.create(here::here("processed_data"))
 #' (re)place the file latest.xlsx in the directory raw_data.
 
 # libraries--------
@@ -23,6 +21,8 @@ library(lubridate)
 #functions-------------------
 source(here::here("R","functions.R"))
 #the script---------------------
+if (!file.exists(here::here("raw_data"))) dir.create(here::here("raw_data"))
+if (!file.exists(here::here("processed_data"))) dir.create(here::here("processed_data"))
 mpi_url_to_scrape <- "https://www2.gov.bc.ca/gov/content/employment-business/economic-development/industry/bc-major-projects-inventory/recent-reports"
 mpi_scraped <- rvest::read_html(mpi_url_to_scrape)
 mpi_links <- rvest::html_attr(rvest::html_nodes(mpi_scraped, "a"), "href") # all the links
