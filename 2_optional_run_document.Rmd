@@ -28,7 +28,9 @@ resource_files:
 if (!"tidyverse" %in% names(sessionInfo()$otherPkgs)) library(tidyverse)
 if (!"lubridate" %in% names(sessionInfo()$otherPkgs)) library(lubridate) # years and months not exported objects
 plots <- readRDS(here::here("processed_data", "plots.rds")) %>%
-  mutate(facet_by = str_to_title(str_replace_all(facet_by, "_", " ")))
+  mutate(facet_by = str_to_title(str_replace_all(facet_by, "_", " ")))%>%
+  filter(facet_by!="Project Type")
+
 #functions---------
 downloadButtonRmd <- function (outputId, label = "Download", class = NULL, ...)  {
      tags$a(id = outputId, class = paste("btn btn-default shiny-download-link", 
