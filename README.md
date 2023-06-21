@@ -3,6 +3,13 @@ mpi_data_quality
 
 ### Usage
 
+Before running, make sure the directory structure is in place:
+
+if (!file.exists(here::here("raw_data"))) dir.create(here::here("raw_data"))
+if (!file.exists(here::here("processed_data"))) dir.create(here::here("processed_data"))
+
+and then (re)place the file latest.xlsx (renamed the current MPI raw data file) in the directory raw_data
+
 You can either just clean the data:
 
 -  source the file **0_source_me_to_clean_MPI.R**
