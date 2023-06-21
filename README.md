@@ -3,12 +3,16 @@ mpi_data_quality
 
 ### Usage
 
-There are three core scripts that are required for the analysis, they need to be run in order:
+You can either just clean the data:
 
--   step_1_source_me_data.R
--   step_2_source_me_clean.R
--   step_3_source_me_plots.R
--   step_4_run_document.Rmd
+-  source the file **0_source_me_to_clean_MPI.R**
+
+or (optionally) visualize the difference between the raw and clean data by various grouping variables:
+
+-  source the file **1_optional_source_me_plots.R**
+-  run document the file **2_optional_run_document.Rmd**
+
+
 
 ### Project Status
 
