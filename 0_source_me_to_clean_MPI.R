@@ -19,77 +19,7 @@
 library(tidyverse)
 library(lubridate)
 #functions-------------------
-Mode <- function(x) {
-  # calculates the most common value of a vector
-  ux <- unique(x)
-  ux[which.max(tabulate(match(x, ux)))]
-}
-mode_fill <- function(tbbl) {
-  # over-writes variables that SHOULD be constant with the project's modal (most common) value.
-  tbbl %>%
-    mutate(
-      project_name = Mode(project_name),
-      project_description= Mode(project_description),
-      construction_type = Mode(construction_type),
-      construction_subtype = Mode(construction_subtype),
-      project_type = Mode(project_type),
-      region = Mode(region),
-      municipality = Mode(municipality),
-      project_category_name = Mode(project_category_name),
-      standardized_start_date = Mode(standardized_start_date),
-      latitude = Mode(latitude),
-      longitude =  Mode(longitude),
-      latitude_dms = Mode(latitude_dms),
-      longitude_dms =  Mode(longitude_dms),
-      first_entry_date = Mode(first_entry_date)
-    )
-}
-
-updown_fill <- function(tbbl) {
-  # creates a regular quarterly grid that extends from the first_entry_date to the maximum value of last_update, then
-  # fills first in the up direction (backwards in time) and then down (forward in time)
-  assertthat::assert_that(all(month(tbbl$first_entry_date) %in% c(3, 6, 9, 12)))
-  assertthat::assert_that(all(day(tbbl$first_entry_date) == 1))
-  assertthat::assert_that(all(month(tbbl$last_update) %in% c(3, 6, 9, 12)))
-  assertthat::assert_that(all(day(tbbl$last_update) == 1))
-
-  all_quarters <- tibble(
-    last_update = seq(min(tbbl$first_entry_date, na.rm = TRUE),
-                      max(tbbl$last_update, na.rm = TRUE),
-                      by = "quarter"
-    )
-  )
-  tbbl <- left_join(all_quarters, tbbl, by = c("last_update" = "last_update"))%>%
-    distinct(last_update, .keep_all = TRUE) %>% # some last_updates incorrect: same for 4 quarters
-    fill(estimated_cost, .direction = "updown") %>%
-    fill(environmental_assessment_stage, .direction='updown')%>%
-    fill(developer, .direction='updown')%>%
-    fill(architect, .direction='updown')%>%
-    fill(project_status, .direction='updown')%>%
-    fill(project_stage, .direction='updown')%>%
-    fill(public_funding_ind, .direction='updown')%>%
-    fill(provinvial_funding, .direction='updown')%>%
-    fill(federal_funding, .direction='updown')%>%
-    fill(municipal_funding, .direction='updown')%>%
-    fill(other_public_funding, .direction='updown')%>%
-    fill(green_building_ind, .direction='updown')%>%
-    fill(green_building_desc, .direction='updown')%>%
-    fill(clean_energy_ind, .direction='updown')%>%
-    fill(indigenous_ind, .direction='updown')%>%
-    fill(indigenous_names, .direction='updown')%>%
-    fill(indigenous_agreement, .direction='updown')%>%
-    fill(construction_jobs, .direction='updown')%>%
-    fill(operating_jobs, .direction='updown')%>%
-    fill(standardized_completion_date, .direction='updown')%>%
-    fill(telephone, .direction='updown')%>%
-    fill(project_website, .direction='updown')%>%
-    fill(first_entry_date, .direction='updown')
-}
-
-fix_last_update <- function(tbbl){
-  tbbl%>%
-    mutate(LastUpDt=Mode(LastUpDt))
-}
+source(here::here("R","functions.R"))
 #the script---------------------
 if (!file.exists(here::here("raw_data"))) dir.create(here::here("raw_data"))
 mpi_url_to_scrape <- "https://www2.gov.bc.ca/gov/content/employment-business/economic-development/industry/bc-major-projects-inventory/recent-reports"
@@ -99,7 +29,7 @@ mpi_links <- mpi_links[mpi_links %>% startsWith("/assets/") & mpi_links %>% ends
   na.omit()
 mpi_links <- paste0("https://www2.gov.bc.ca", mpi_links) # paste the head onto the stubs
 mpi_files <- paste0("mpi_dl", 1:length(mpi_links), ".xlsx") # sane file naming.
-mapply(download.file, mpi_links, here::here("raw_data", mpi_files)) # downloads all the old mpi files into folder raw_data
+#mapply(download.file, mpi_links, here::here("raw_data", mpi_files)) # downloads all the old mpi files into folder raw_data
 mpi_all_sheets <- sapply(here::here("raw_data", mpi_files), readxl::excel_sheets) # gets all the sheets
 sheet_starts_with_mpi <- lapply(mpi_all_sheets, function(x) x[startsWith(x, "mpi")]) %>%
   unlist(use.names = FALSE) # could break... assumes excel sheet naming remains consistent.
@@ -109,15 +39,19 @@ mpi_nested <- tibble(file = here::here("raw_data", mpi_files), sheet = mpi_sheet
   mutate(
     data = map2(file, sheet, readxl::read_excel),
     data = map(data, janitor::clean_names),
+    data = map(data, fix_last_update), #replaces last update with modal value for the quarter.
     ncol = map(data, ncol)
   )
-#Man-ually supplied file---------
+
+mpi_nested <- mpi_nested[!duplicated(mpi_nested$sheet),] #for some reason duplicates?
+
+#file to clean---------
 latest_data <- tibble(file=here::here("raw_data","latest.xlsx"),
                       sheet="should only be one sheet")%>%
   mutate(
     data = map(file, readxl::read_excel),
-    data = map(data, fix_last_update),
     data = map(data, janitor::clean_names),
+    data = map(data, fix_last_update),
     ncol = map(data, ncol)
   )
 
@@ -136,6 +70,8 @@ mpi_raw <- data.table::rbindlist(mpi_nested$data, use.names = FALSE) %>%
     )
   )
 
+global_start_date <- min(mpi_raw$last_update, na.rm = TRUE) # the date of the first MPI file used.
+global_last_date <- max(mpi_raw$last_update, na.rm = TRUE) # the date of the last MPI file used.
 #clean the data-----------------
 
 mode_filled <- mpi_raw %>%
@@ -160,7 +96,7 @@ nested <- mode_filled%>%
            latitude_dms,
            longitude_dms
   ) %>%
-  nest() %>%
+  nest()%>%
   mutate(data = map(data, updown_fill))%>%
   arrange(project_id)
 
@@ -204,9 +140,27 @@ mpi_clean <- nested %>%
          telephone,
          project_website,
          first_entry_date,
-         last_update)
+         last_update)%>%
+  filter(last_update >= global_start_date) %>% # trim off data from before the date of the first file.
+  nest() %>%
+  mutate(data = map(data, add_weight)) %>%
+  # without weights group averages would be biased towards long lived projects i.e. with weights each project gets equal weight regardless of how long lived.
+  unnest(data)
 
+# Fabricated data is for projects that have NEVER reported an estimated cost.  These NAs are replaced by the average of
+# 1) 15M: which is the minimum project size to be considered "major" and
+# 2) the average estimated cost among projects that share the same
+#     - construction_type,
+#     - construction_subtype,
+#     - project_type and
+#     - project_category_name
+mpi_fabricated <- mpi_clean %>%
+  group_by(construction_type, construction_subtype, project_type, project_category_name) %>%
+  mutate(estimated_cost = ifelse(is.na(estimated_cost), (weighted.mean(estimated_cost, w = weight, na.rm = TRUE) + 15) / 2, estimated_cost))
 
+saveRDS(mpi_raw, here::here("processed_data", "mpi_raw.rds"))
+saveRDS(mpi_clean, here::here("processed_data", "mpi_clean.rds"))
+saveRDS(mpi_fabricated, here::here("processed_data", "mpi_fabricated.rds"))
 
 mpi_clean_current <- mpi_clean%>%
   ungroup()%>%
