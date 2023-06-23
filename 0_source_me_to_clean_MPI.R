@@ -28,7 +28,7 @@ mpi_scraped <- rvest::read_html(mpi_url_to_scrape)
 mpi_links <- rvest::html_attr(rvest::html_nodes(mpi_scraped, "a"), "href") # all the links
 mpi_links <- mpi_links[mpi_links %>% startsWith("/assets/") & mpi_links %>% endsWith(".xlsx")] %>% # stubs of the links we want.
   na.omit()
-mpi_links <- paste0("https://www2.gov.bc.ca", mpi_links) # paste the head onto the stubs
+mpi_links <- paste0("https://www2.gov.bc.ca", mpi_links)[1:20] # paste the head onto the stubs, only 20 most recent quarters
 mpi_files <- paste0("mpi_dl", 1:length(mpi_links), ".xlsx") # sane file naming.
 # NOTE THAT YOU ONLY NEED TO DOWNLOAD THE DATA ONCE PER QUARTER... FOLLOWING LINE CAN BE COMMENTED OUT TO SKIP DOWNLOAD
 mapply(download.file, mpi_links, here::here("raw_data", mpi_files), mode="wb") # downloads all the old mpi files into folder raw_data
