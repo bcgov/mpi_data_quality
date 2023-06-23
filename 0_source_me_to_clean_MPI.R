@@ -31,7 +31,7 @@ mpi_links <- mpi_links[mpi_links %>% startsWith("/assets/") & mpi_links %>% ends
 mpi_links <- paste0("https://www2.gov.bc.ca", mpi_links) # paste the head onto the stubs
 mpi_files <- paste0("mpi_dl", 1:length(mpi_links), ".xlsx") # sane file naming.
 # NOTE THAT YOU ONLY NEED TO DOWNLOAD THE DATA ONCE PER QUARTER... FOLLOWING LINE CAN BE COMMENTED OUT TO SKIP DOWNLOAD
-mapply(download.file, mpi_links, here::here("raw_data", mpi_files)) # downloads all the old mpi files into folder raw_data
+mapply(download.file, mpi_links, here::here("raw_data", mpi_files), mode="wb") # downloads all the old mpi files into folder raw_data
 ########
 mpi_all_sheets <- sapply(here::here("raw_data", mpi_files), readxl::excel_sheets) # gets all the sheets
 sheet_starts_with_mpi <- lapply(mpi_all_sheets, function(x) x[startsWith(x, "mpi")]) %>%
