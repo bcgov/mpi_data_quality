@@ -48,7 +48,7 @@ updown_fill <- function(tbbl) {
     fill(project_status, .direction='updown')%>%
     fill(project_stage, .direction='updown')%>%
     fill(public_funding_ind, .direction='updown')%>%
-    fill(provinvial_funding, .direction='updown')%>%
+  #  fill(provinvial_funding, .direction='updown')%>%
     fill(federal_funding, .direction='updown')%>%
     fill(municipal_funding, .direction='updown')%>%
     fill(other_public_funding, .direction='updown')%>%
@@ -109,8 +109,8 @@ plot_diff <- function(var) {
     facet_wrap(~`get(var)`, scales = "free_y") +
     scale_y_continuous(labels = scales::comma) +
     scale_colour_brewer(palette = "Dark2")
-  plt <- wrapR::fix_labs(plt)
-  #  plotly::ggplotly(plt)
+  #plt <- wrapR::fix_labs(plt)
+    plotly::ggplotly(plt)
 }
 
 

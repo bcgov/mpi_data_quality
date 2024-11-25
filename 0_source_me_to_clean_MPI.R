@@ -25,13 +25,11 @@ if (!file.exists(here::here("raw_data"))) dir.create(here::here("raw_data"))
 if (!file.exists(here::here("processed_data"))) dir.create(here::here("processed_data"))
 mpi_url_to_scrape <- "https://www2.gov.bc.ca/gov/content/employment-business/economic-development/industry/bc-major-projects-inventory/recent-reports"
 mpi_scraped <- rvest::read_html(mpi_url_to_scrape)
-mpi_links <- rvest::html_attr(rvest::html_nodes(mpi_scraped, "a"), "href") # all the links
-mpi_links <- mpi_links[mpi_links %>% startsWith("/assets/") & mpi_links %>% endsWith(".xlsx")] %>% # stubs of the links we want.
-  na.omit()
-mpi_links <- paste0("https://www2.gov.bc.ca", mpi_links)[1:20] # paste the head onto the stubs, only 20 most recent quarters
+dirty_links <- rvest::html_attr(rvest::html_nodes(mpi_scraped, "a"), "href")
+mpi_links <- dirty_links[str_detect(dirty_links, ".xlsx")][2:23] #starts at 2 because we already have the latest
 mpi_files <- paste0("mpi_dl", 1:length(mpi_links), ".xlsx") # sane file naming.
 # NOTE THAT YOU ONLY NEED TO DOWNLOAD THE DATA ONCE PER QUARTER... FOLLOWING LINE CAN BE COMMENTED OUT TO SKIP DOWNLOAD
-mapply(download.file, mpi_links, here::here("raw_data", mpi_files), mode="wb") # downloads all the old mpi files into folder raw_data
+mapply(download.file, mpi_links, here::here("raw_data", mpi_files), mode="wb") # NOTE MODE="WB" FOR WINDOZ COMPATABILITY
 ########
 mpi_all_sheets <- sapply(here::here("raw_data", mpi_files), readxl::excel_sheets) # gets all the sheets
 sheet_starts_with_mpi <- lapply(mpi_all_sheets, function(x) x[startsWith(x, "mpi")]) %>%
@@ -43,19 +41,19 @@ mpi_nested <- tibble(file = here::here("raw_data", mpi_files), sheet = mpi_sheet
     data = map2(file, sheet, readxl::read_excel),
     data = map(data, janitor::clean_names),
     data = map(data, fix_last_update), #replaces last update with modal value for the quarter.
-    ncol = map(data, ncol)
+    ncol = map_dbl(data, ncol)
   )
 
 mpi_nested <- mpi_nested[!duplicated(mpi_nested$sheet),] #for some reason duplicates?
 
 #file to clean---------
 latest_data <- tibble(file=here::here("raw_data","latest.xlsx"),
-                      sheet="should only be one sheet")%>%
+                      sheet="mpi_dataset_q1_2024")%>% #this needs to change
   mutate(
-    data = map(file, readxl::read_excel),
+    data = map2(file, sheet, readxl::read_excel),
     data = map(data, janitor::clean_names),
     data = map(data, fix_last_update),
-    ncol = map(data, ncol)
+    ncol = map_dbl(data, ncol)
   )
 
 mpi_nested <- bind_rows(mpi_nested, latest_data)
@@ -122,7 +120,7 @@ mpi_clean <- nested %>%
          project_stage,
          project_category_name,
          public_funding_ind,
-         provinvial_funding,
+        # provinvial_funding,
          federal_funding,
          municipal_funding,
          other_public_funding,
@@ -238,10 +236,10 @@ raw_and_clean_current <- full_join(mpi_raw_current, mpi_clean_current, by="proje
                            FALSE,
                            TRUE,
                            TRUE),
-         provinvial_funding_change = if_else(provinvial_funding_clean == provinvial_funding_raw,
-                           FALSE,
-                           TRUE,
-                           TRUE),
+         # provinvial_funding_change = if_else(provinvial_funding_clean == provinvial_funding_raw,
+         #                   FALSE,
+         #                   TRUE,
+         #                   TRUE),
          federal_funding_change = if_else(federal_funding_clean == federal_funding_raw,
                            FALSE,
                            TRUE,
