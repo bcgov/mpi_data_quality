@@ -19,15 +19,13 @@ source(here::here("R", "functions.R"))
 mpi_raw <- readRDS(here::here("processed_data", "mpi_raw.rds")) %>%
   mutate(data_type = "raw")
 mpi_clean <- readRDS(here::here("processed_data", "mpi_clean.rds")) %>%
-  mutate(data_type = "clean") %>%
-  select(-weight)
-mpi_fabricated <- readRDS(here::here("processed_data", "mpi_fabricated.rds")) %>%
-  mutate(data_type = "fabricated") %>%
-  select(-weight)
+  mutate(data_type = "clean")
 
-all_data <- bind_rows(mpi_raw, mpi_clean, mpi_fabricated)
+
+all_data <- bind_rows(mpi_raw, mpi_clean)
 
 plots <- tibble(facet_by = c("construction_type", "construction_subtype", "project_type", "region", "project_status", "project_stage", "project_category_name")) %>%
   mutate(plot = map(facet_by, plot_diff))
 
 saveRDS(plots, here::here("processed_data", "plots.rds"))
+

@@ -1,0 +1,183 @@
+---
+title: 'Major Project Inventory: data quality'
+output:
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    social: menu
+    source_code: https://github.com/bcgov/mpi_data_quality
+    css: style.css
+runtime: shiny
+resource_files:
+- processed_data/plots.rds
+- processed_data/mpi_raw.rds
+---
+
+```{r global, include=FALSE}
+# Copyright 2022 Province of British Columbia
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and limitations under the License.
+# libraries----------
+library(tidyverse)
+library(here)
+library(knitr)
+library(kableExtra)
+tbbl <- read_rds(here("processed_data", "mpi_raw.rds"))|>
+  select(project_id, project_name, estimated_cost, project_stage, project_status, last_update)|>
+  mutate(project_stage=if_else(project_stage=="Elementary School Additions", NA, project_stage))
+
+pp_name <- tbbl|>
+  filter(
+    (project_status=="Proposed" & is.na(project_stage))|
+    (project_status=="Construction started" & project_stage=="Tender/Preconstruction")
+    )|>
+  select(project_name, estimated_cost)|>
+  distinct()
+
+pp <- semi_join(tbbl, pp_name|>select(project_name))|>
+  arrange(project_name, last_update)|>
+  group_by(project_name)|>
+  pivot_longer(cols=c(project_stage, project_status))
+
+projects <- pp_name|>
+  arrange(desc(estimated_cost))|>
+  pull(project_name)
+
+plots <- readRDS(here::here("processed_data", "plots.rds")) %>%
+  mutate(facet_by = str_to_title(str_replace_all(facet_by, "_", " ")))%>%
+  filter(facet_by!="Project Type")
+```
+
+Raw vs Clean
+======================================================
+
+
+Inputs {.sidebar data-width=400}
+-------------------------------------
+
+```{r}
+selectInput(
+  "facet_var",
+  "What variable do you want to facet by?",
+  plots$facet_by,
+  selected = plots$facet_by[1],
+  multiple = FALSE
+)
+```
+
+* Raw data is sourced from [Economic Development](https://www2.gov.bc.ca/gov/content/employment-business/economic-development/industry/bc-major-projects-inventory/recent-reports) with no processing.
+
+* Clean data corrects for two main problems in the data:
+  + Mis-categorization: some projects change categories mid-project. 
+  + Missing values, both explicit (the presence of an absence i.e. value recorded as NA) and implicit (the absence of a presence i.e. project missing from MPI).
+
+* In order to clean the data:
+  + For each project the reported categories are replaced with that project's modal (most common) reported category.
+  + Implicit missing values are converted to explicit missing values by left joining 1) a regular grid of quarterly dates with 2) the observed data.
+  + Finally the explicit missing variables (estimated_cost, telephone, project_status, first_entry_date) are "updown" filled:  First missing values are filled up (backwards in time) and then down (forwards in time).
+
+* Note the variable `project_stage` is not cleaned as it is possible that NA is a valid stage, not a missing value: see problem and solution pages.
+
+Column
+-----------------------------------------------------------------------
+
+###
+
+```{r, fig.retina=2}
+renderPlot({
+  req(input$facet_var)
+  plt <- plots %>%
+    filter(facet_by == input$facet_var) %>%
+    select(plot) %>%
+    pull()
+  plt[[1]]
+}) %>%
+  bindCache(input$facet_var)
+```
+
+Problem
+===================================================================
+
+
+Inputs {.sidebar}
+-------------------------------------
+
+-   In the table to the right, the red cell entry (status=Proposed, stage=NA) is potentially problematic: 
+    - is NA a valid level of project stage for proposed projects?
+    - or does NA indicate that project stage is one of Consultation/Approvals, Permitting, Preliminary/Feasibility, Tender/Preconstruction, but we do not know which one?
+
+
+```{r}
+selectInput(
+  "project_id",
+  "Select a project from the red cell:",
+  projects,
+  projects[1]
+)
+
+filtered <- reactive({
+  pp|>
+    filter(project_name==input$project_id)
+})
+```
+ 
+Column
+-------------------------------------
+
+### Tabulation of project stage and project status
+
+```{r}
+tabled <- with(tbbl, table(project_stage, project_status, useNA="ifany"))
+cells_to_format <- list(c(5, 4)) 
+for (cell in cells_to_format) {
+  row <- cell[1]
+  col <- cell[2]
+  tabled[row, col] <- cell_spec(
+    tabled[row, col],
+    format = "html", # Required for HTML styling
+    color = "red",
+    bold = TRUE
+  )
+}
+kable(tabled, "html", escape = FALSE)|>
+  kable_styling()
+```
+
+### Plot of stage and status
+    
+```{r}
+renderPlot({
+  filtered()|>
+    ggplot(aes(last_update, value, colour=name, size=estimated_cost))+
+    geom_point()+
+    labs(title=filtered()$project_name[1])
+})
+```
+
+Solution
+=================================================
+
+-   I suggest `project_stage` and `project_status` get collapsed into a single variable `project_stagus`, with mutually exclusive, totally exhaustive levels:
+    
+    - Completed
+    - Construction started	
+    - On hold
+    - Proposed (for projects prior to any of the levels below)
+    - Consultation/Approvals
+    - Permitting
+    - Preliminary/Feasibility
+    - Tender/Preconstruction
+    
+    
+-   If `project_stagus` is either blank or NA the meaning is clear: the `project_stagus` was not available this quarter.
+  
+
+
+

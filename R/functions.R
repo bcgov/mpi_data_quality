@@ -46,7 +46,7 @@ updown_fill <- function(tbbl) {
     fill(developer, .direction='updown')%>%
     fill(architect, .direction='updown')%>%
     fill(project_status, .direction='updown')%>%
-    fill(project_stage, .direction='updown')%>%
+  #  fill(project_stage, .direction='updown')%>% #NA is a valid level for project_stage: do not overwrite.
     fill(public_funding_ind, .direction='updown')%>%
   #  fill(provinvial_funding, .direction='updown')%>%
     fill(federal_funding, .direction='updown')%>%
@@ -92,40 +92,25 @@ keep_columns <- function(df) {
       "last_update", "last_up_dt"
     ))
 }
-add_weight <- function(tbbl) {
-  # without weights group averages would be biased towards long lived projects i.e. with weights each project gets equal weight regardless of how long lived.
-  nobs <- dim(tbbl)[1]
-  tbbl <- tbbl %>%
-    mutate(weight = 1 / nobs)
-}
+
 
 plot_diff <- function(var) {
-  plt <- all_data %>%
+  all_data %>%
     group_by(get(var), last_update, data_type) %>%
     summarize(total_cost = sum(estimated_cost, na.rm = TRUE)) %>%
     ggplot(aes(last_update, total_cost, colour = data_type)) +
     geom_line() +
-    geom_point(alpha=.5)+
     facet_wrap(~`get(var)`, scales = "free_y") +
     scale_y_continuous(labels = scales::comma) +
-    scale_colour_brewer(palette = "Dark2")
-  #plt <- wrapR::fix_labs(plt)
-    plotly::ggplotly(plt)
+    scale_colour_brewer(palette = "Dark2")+
+    theme(text=element_text(size=16), legend.position = "bottom")+
+    labs(x=NULL, y="$(Millions)", colour=NULL)
 }
 
-
-
-# possibly_abandoned <- function(tbbl) {
-#   # find projects where they were previously present in the MPI, are now missing AND were NOT reported completed.
-#   last_reported_stage <- tbbl %>%
-#     filter(last_update == max(last_update)) %>%
-#     pull(project_stage)
-#   value <- max(tbbl$last_update) < global_last_date & !last_reported_stage == "Completed"
-# }
-# last_var <- function(tbbl, var) {
-#   # get the last value of a variable.
-#   tbbl %>%
-#     filter(last_update == max(last_update)) %>%
-#     pull({{ var }}) %>%
-#     as.character()
-# }
+compare <- function(raw, clean, var, quoted_var){
+  ggplot()+
+    geom_point(data=raw, mapping=aes(last_update, {{  var  }}), colour="red", size=3)+
+    geom_point(data=clean, mapping=aes(last_update, {{  var  }}), colour="green", size=2)+
+    labs(x=NULL, y=NULL, title=quoted_var)+
+    theme(text=element_text(size=18))
+}

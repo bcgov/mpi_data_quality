@@ -1,35 +1,25 @@
-# Copyright 2022 Province of British Columbia
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and limitations under the License.
+---
+title: "Clean MPI"
+output:
+  flexdashboard::flex_dashboard: null
+runtime: shiny
+resource_files:
+- R/functions.R
+---
 
-# This script downloads previous MPI data from https://www2.gov.bc.ca/gov/content/employment-business/economic-development/industry/bc-major-projects-inventory/recent-reports
-
-#' Before running:
-#' (re)place the file latest.xlsx in the directory raw_data.
-
-# libraries--------
+```{r, include=FALSE}
 library(tidyverse)
-library(lubridate)
-#functions-------------------
-source(here::here("R","functions.R"))
-#the script---------------------
-if (!file.exists(here::here("raw_data"))) dir.create(here::here("raw_data"))
-if (!file.exists(here::here("processed_data"))) dir.create(here::here("processed_data"))
+library(here)
+library(patchwork)
+source(here("R","functions.R"))
+if (!dir.exists("raw_data")) dir.create("raw_data")
 mpi_url_to_scrape <- "https://www2.gov.bc.ca/gov/content/employment-business/economic-development/industry/bc-major-projects-inventory/recent-reports"
 mpi_scraped <- rvest::read_html(mpi_url_to_scrape)
 dirty_links <- rvest::html_attr(rvest::html_nodes(mpi_scraped, "a"), "href")
 mpi_links <- dirty_links[str_detect(dirty_links, ".xlsx")][2:23] #starts at 2 because we already have the latest
 mpi_files <- paste0("mpi_dl", 1:length(mpi_links), ".xlsx") # sane file naming.
 # NOTE THAT YOU ONLY NEED TO DOWNLOAD THE DATA ONCE PER QUARTER... FOLLOWING LINE CAN BE COMMENTED OUT TO SKIP DOWNLOAD
-#mapply(download.file, mpi_links, here::here("raw_data", mpi_files), mode="wb") # NOTE MODE="WB" FOR WINDOZ COMPATABILITY
+mapply(download.file, mpi_links, here::here("raw_data", mpi_files), mode="wb") # NOTE MODE="WB" FOR WINDOZ COMPATABILITY
 ########
 mpi_all_sheets <- sapply(here::here("raw_data", mpi_files), readxl::excel_sheets) # gets all the sheets
 sheet_starts_with_mpi <- lapply(mpi_all_sheets, function(x) x[startsWith(x, "mpi")]) %>%
@@ -45,23 +35,103 @@ mpi_nested <- tibble(file = here::here("raw_data", mpi_files), sheet = mpi_sheet
   )
 
 mpi_nested <- mpi_nested[!duplicated(mpi_nested$sheet),] #for some reason duplicates?
+```
 
-#file to clean---------
-latest_data <- tibble(file=here::here("raw_data","latest.xlsx"),
-                      sheet="mpi_dataset_q1_2024")%>% #THIS WILL NEED TO BE CHANGED
-  mutate(
-    data = map2(file, sheet, readxl::read_excel),
-    data = map(data, janitor::clean_names),
-    data = map(data, fix_last_update),
-    ncol = map_dbl(data, ncol)
-  )
+Inputs {.sidebar}
+===============================================
 
-mpi_nested <- bind_rows(mpi_nested, latest_data)
+N.B. expect a couple minute delay between uploading the file and the app becoming functional... there is a fair bit of processing to do.
 
-mpi_raw <- data.table::rbindlist(mpi_nested$data, use.names = FALSE) %>%
+```{r}
+# inputs-------------------------
+
+fileInput("file", 
+          "Upload current raw MPI file:", 
+          accept = c(".xlsx", ".xls"))
+
+
+```
+
+```{r}
+renderUI({
+  req(input$file)
+  req(latest_data())
+  req(all_data())
+  req(mpi_raw())
+  req(global_start_date())
+  req(global_last_date())
+  req(mode_filled())
+  req(nested())
+  req(mpi_clean())
+  req(mpi_clean_current())
+  req(mpi_raw_current())
+  req(raw_and_clean_current())
+  req(changed())
+  req(changed_ids())
+  selectInput(
+      inputId = "project",
+      label = "Select a project that was modified:",
+      choices = changed_ids(),
+      selected = changed_ids()[1])
+})
+
+```
+
+#### Download the cleaned version of the current data:
+
+```{r}
+renderUI({
+  req(input$file)  # Ensure a file is uploaded
+  downloadHandler(
+  filename = function() {
+    "mpi_clean_current.csv"
+  },
+  content = function(file) {
+    write.csv(mpi_clean_current(), file, row.names = FALSE) # Save tibble as a CSV file
+  }
+)
+})
+```
+
+#### Download the cleaned version of all the data:
+
+
+```{r}
+renderUI({
+  req(input$file)  # Ensure a file is uploaded
+  downloadHandler(
+  filename = function() {
+    "mpi_clean.csv"
+  },
+  content = function(file) {
+    write.csv(mpi_clean(), file, row.names = FALSE) # Save tibble as a CSV file
+  }
+)
+})
+```
+
+
+```{r}
+#reactive elements-----------------------------------
+latest_data <- reactive({
+  sheets <- readxl::excel_sheets(input$file$datapath)
+  sheet <- sheets[str_detect(sheets,"mpi")]
+  data <- readxl::read_excel(input$file$datapath, sheet=sheet)
+  tibble(file=input$file$datapath, 
+         sheet=sheet,
+         data=list(data), 
+         ncol=ncol(data))
+})
+
+all_data <- reactive({
+  bind_rows(mpi_nested, latest_data())
+})
+
+mpi_raw <- reactive({
+  data.table::rbindlist(all_data()$data, use.names = FALSE) %>%
   as_tibble() %>%
   mutate(
-    last_update = lubridate::round_date(last_update, unit = "quarter") - months(1), # rounding to quarter gives months 1,4,7,10... we want 12,3,6,9
+    last_update = lubridate::round_date(last_update, unit = "quarter") - months(1), 
     first_entry_date = lubridate::round_date(first_entry_date, unit = "quarter") - months(1),
     project_category_name = fct_collapse(project_category_name,
                                          `Residential & Commercial` = c(
@@ -70,20 +140,21 @@ mpi_raw <- data.table::rbindlist(mpi_nested$data, use.names = FALSE) %>%
                                          )
     )
   )
+})
 
-global_start_date <- min(mpi_raw$last_update, na.rm = TRUE) # the date of the first MPI file used.
-global_last_date <- max(mpi_raw$last_update, na.rm = TRUE) # the date of the last MPI file used.
+ global_start_date <- reactive({min(mpi_raw()$last_update, na.rm = TRUE)}) # the date of the first MPI file used.
+ global_last_date <- reactive({max(mpi_raw()$last_update, na.rm = TRUE)}) # the date of the last MPI file used.
 
-
-#clean the data-----------------
-
-mode_filled <- mpi_raw %>%
+mode_filled <- reactive({
+  mpi_raw() %>%
   group_by(project_id) %>%
   nest() %>%
   mutate(data = map(data, mode_fill)) %>% # replace all the categorical variables that SHOULD be constant with their modal value
   unnest(data)
+})
 
-nested <- mode_filled%>%
+nested <- reactive({
+  mode_filled()%>%
   group_by(project_id, #all the non variable variables
            project_name,
            project_description,
@@ -102,8 +173,10 @@ nested <- mode_filled%>%
   nest()%>%
   mutate(data = map(data, updown_fill))%>%
   arrange(project_id)
+})
 
-mpi_clean <- nested %>%
+mpi_clean <- reactive({
+  nested() %>%
   unnest(data)%>%
   select(project_id, #make sure the columns are in correct order
          project_name,
@@ -144,21 +217,23 @@ mpi_clean <- nested %>%
          project_website,
          first_entry_date,
          last_update)%>%
-  filter(last_update >= global_start_date) # trim off data from before the date of the first file.
+  filter(last_update >= global_start_date()) # trim off data from before the date of the first file.
+})
 
-
-saveRDS(mpi_raw, here::here("processed_data", "mpi_raw.rds"))
-saveRDS(mpi_clean, here::here("processed_data", "mpi_clean.rds"))
-
-mpi_clean_current <- mpi_clean%>%
+mpi_clean_current <- reactive({
+  mpi_clean()%>%
   ungroup()%>%
   filter(last_update==max(last_update))
+})
 
-mpi_raw_current <- mpi_raw%>%
+mpi_raw_current <- reactive({
+  mpi_raw()%>%
   filter(last_update==max(last_update))%>%
   arrange(project_id)
+})
 
-raw_and_clean_current <- full_join(mpi_raw_current, mpi_clean_current, by="project_id", suffix = c("_raw","_clean"))%>% #add flags for changes
+raw_and_clean_current <- reactive({
+  full_join(mpi_raw_current(), mpi_clean_current(), by="project_id", suffix = c("_raw","_clean"))%>% #add flags for changes
   mutate(project_name_change = if_else(project_name_clean == project_name_raw,
                                   FALSE,
                                   TRUE),
@@ -274,10 +349,10 @@ raw_and_clean_current <- full_join(mpi_raw_current, mpi_clean_current, by="proje
                            FALSE,
                            TRUE)
   )
+})
 
-#find projects with changes to variables we care about
-
-changed <- raw_and_clean_current|>
+changed <- reactive({
+  raw_and_clean_current()|>
   filter(estimated_cost_change==TRUE |
            construction_type_change==TRUE |
            construction_subtype_change==TRUE |
@@ -296,27 +371,58 @@ changed <- raw_and_clean_current|>
          contains("project_category_name")
          )|>
   arrange(desc(estimated_cost_raw))
+})
+
+changed_ids <- reactive({
+  changed()|>
+    pull(project_id)
+})
+
+raw <- reactive({
+  mpi_raw()|>
+    filter(project_id==input$project)
+})
+clean <- reactive({
+  mpi_clean()|>
+    filter(project_id==input$project)
+})
+
+```
 
 
-colnames(mpi_clean) <- str_to_upper(colnames(mpi_clean))
-write_csv(mpi_clean, here::here("processed_data","mpi_clean.csv"))
+Plots 
+================================================
 
-colnames(mpi_clean_current) <- str_to_upper(colnames(mpi_clean_current))
-write_csv(mpi_clean_current, here::here("processed_data","mpi_clean_current.csv"))
+Row 
+-------------------------------------
 
-colnames(mpi_raw_current) <- str_to_upper(colnames(mpi_raw_current))
-write_csv(mpi_raw_current, here::here("processed_data","mpi_raw_current.csv"))
+###
 
-colnames(raw_and_clean_current) <- str_to_upper(colnames(raw_and_clean_current))
-write_csv(raw_and_clean_current, here::here("processed_data","raw_and_clean_current.csv"))
+```{r}
+renderPlot({
+req(input$project)
+plt1 <- compare(raw(),clean(), estimated_cost, "estimated_cost") 
+plt2 <- compare(raw(),clean(), construction_type, "construction_type")
+plt3 <- compare(raw(),clean(), construction_subtype, "construction_subtype")
+plt4 <- compare(raw(),clean(), project_status, "project_status")
+plt5 <- compare(raw(),clean(), project_stage, "project_stage")
+plt6 <- compare(raw(),clean(), project_category_name, "project_category_name")
+ 
+(plt1+plt2+plt3)/(plt4+plt5+plt6)
 
+})
+```
 
+Table
+================================================
 
+### 
 
-
-
-
-
-
+```{r}
+DT::renderDT({
+  req(input$file)  # Ensure a file is uploaded
+  DT::datatable(changed(), rownames=FALSE, filter="top")
+})
+```
 
 
